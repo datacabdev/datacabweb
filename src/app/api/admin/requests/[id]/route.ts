@@ -1,0 +1,19 @@
+import { NextResponse } from "next/server";
+import { connectToDatabase } from "@/lib/mongodb";
+import DataRequest from "@/models/DataRequest";
+
+export async function PATCH(req: Request, { params }: { params: Promise<{ id: string }> }) {
+  await connectToDatabase();
+  const { id } = await params;
+  const { status } = await req.json();
+  const updated = await DataRequest.findByIdAndUpdate(id, { status }, { new: true });
+  if (!updated) return NextResponse.json({ error: "Not found" }, { status: 404 });
+  return NextResponse.json(updated);
+}
+
+export async function DELETE(_req: Request, { params }: { params: Promise<{ id: string }> }) {
+  await connectToDatabase();
+  const { id } = await params;
+  await DataRequest.findByIdAndDelete(id);
+  return NextResponse.json({ success: true });
+}
