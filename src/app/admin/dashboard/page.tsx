@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { Search, Filter, Download, Plus, Trash2, MoreVertical, Copy, X, Pencil } from "lucide-react";
+import Toast from "@/components/admin/Toast";
 
 interface AirRecord {
   _id: string;
@@ -26,6 +27,7 @@ export default function DashboardPage() {
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState("");
   const [activeMenu, setActiveMenu] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -55,16 +57,21 @@ export default function DashboardPage() {
     setSaving(false);
     if (!res.ok) {
       setSaveError(data.error ?? "Something went wrong");
+      setToast({ message: data.error ?? "Something went wrong", type: "error" });
       return;
     }
     setShowModal(false);
+    setToast({ message: editId ? "Device updated successfully" : "Device added successfully", type: "success" });
     load();
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this record?")) return;
-    await fetch(`/api/admin/air-data/${id}`, { method: "DELETE" });
-    setActiveMenu(null); load();
+    const res = await fetch(`/api/admin/air-data/${id}`, { method: "DELETE" });
+    setActiveMenu(null);
+    if (res.ok) setToast({ message: "Device deleted", type: "success" });
+    else setToast({ message: "Failed to delete device", type: "error" });
+    load();
   };
 
   const downloadCSV = () => {
@@ -77,6 +84,8 @@ export default function DashboardPage() {
   };
 
   return (
+    <>
+    {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     <div className="p-4 sm:p-6">
       <div className="bg-white rounded-2xl p-4 sm:p-6">
         <h1 className="text-xl font-bold text-gray-900 mb-5">Air Monitoring Data</h1>
@@ -228,5 +237,6 @@ export default function DashboardPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

@@ -2,6 +2,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { Search, Plus, Trash2, Pencil, X } from "lucide-react";
 import dynamic from "next/dynamic";
+import Toast from "@/components/admin/Toast";
 
 const RichTextEditor = dynamic(() => import("@/components/admin/RichTextEditor"), { ssr: false, loading: () => <div className="h-40 bg-[#EBEBEB] rounded-lg animate-pulse" /> });
 
@@ -19,6 +20,7 @@ export default function ContentPage() {
   const [form, setForm] = useState({ title: "", content: "" });
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -34,23 +36,34 @@ export default function ContentPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
-    await fetch(editId ? `/api/admin/content/${editId}` : "/api/admin/content", {
+    const res = await fetch(editId ? `/api/admin/content/${editId}` : "/api/admin/content", {
       method: editId ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
-    setSaving(false); setShowModal(false); load();
+    setSaving(false);
+    if (res.ok) {
+      setToast({ message: editId ? "Content updated successfully" : "Content created successfully", type: "success" });
+      setShowModal(false); load();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setToast({ message: data.error ?? "Failed to save content", type: "error" });
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this content?")) return;
-    await fetch(`/api/admin/content/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/admin/content/${id}`, { method: "DELETE" });
+    if (res.ok) setToast({ message: "Content deleted", type: "success" });
+    else setToast({ message: "Failed to delete content", type: "error" });
     load();
   };
 
   const stripHtml = (html: string) => html.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 120);
 
   return (
+    <>
+    {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     <div className="p-4 sm:p-6">
       <div className="bg-white rounded-2xl p-4 sm:p-6">
         <h1 className="text-xl font-bold text-gray-900 mb-5">Website Content</h1>
@@ -126,5 +139,6 @@ export default function ContentPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

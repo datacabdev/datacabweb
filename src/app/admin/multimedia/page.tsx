@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { Search, Plus, Trash2, X, Pencil } from "lucide-react";
+import Toast from "@/components/admin/Toast";
 import Image from "next/image";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 
@@ -22,6 +23,7 @@ export default function MultimediaPage() {
   const [form, setForm] = useState({ title: "", url: "", type: "image", order: "" });
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -45,22 +47,33 @@ export default function MultimediaPage() {
     if (!form.url) { alert("Please upload an image first"); return; }
     setSaving(true);
     const payload = { ...form, thumbnail: form.url, order: form.order !== "" ? Number(form.order) : 0 };
-    await fetch(editId ? `/api/admin/multimedia/${editId}` : "/api/admin/multimedia", {
+    const res = await fetch(editId ? `/api/admin/multimedia/${editId}` : "/api/admin/multimedia", {
       method: editId ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-    setSaving(false); setShowModal(false);
-    setForm({ title: "", url: "", type: "image", order: "" }); setEditId(null); load();
+    setSaving(false);
+    if (res.ok) {
+      setToast({ message: editId ? "Image updated successfully" : "Image uploaded successfully", type: "success" });
+      setShowModal(false);
+      setForm({ title: "", url: "", type: "image", order: "" }); setEditId(null); load();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setToast({ message: data.error ?? "Failed to save image", type: "error" });
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this item?")) return;
-    await fetch(`/api/admin/multimedia/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/admin/multimedia/${id}`, { method: "DELETE" });
+    if (res.ok) setToast({ message: "Image deleted", type: "success" });
+    else setToast({ message: "Failed to delete image", type: "error" });
     load();
   };
 
   return (
+    <>
+    {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     <div className="p-4 sm:p-6">
       <div className="bg-white rounded-2xl p-4 sm:p-6">
         <h1 className="text-xl font-bold text-gray-900 mb-5">Multimedia</h1>
@@ -149,5 +162,6 @@ export default function MultimediaPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

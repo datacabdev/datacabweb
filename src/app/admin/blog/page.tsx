@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { Search, Plus, Trash2, Pencil, X } from "lucide-react";
+import Toast from "@/components/admin/Toast";
 import Image from "next/image";
 import ImageUploadField from "@/components/admin/ImageUploadField";
 import dynamic from "next/dynamic";
@@ -28,6 +29,7 @@ export default function BlogPage() {
   const [form, setForm] = useState(emptyForm);
   const [editId, setEditId] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -47,21 +49,32 @@ export default function BlogPage() {
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault(); setSaving(true);
-    await fetch(editId ? `/api/admin/blog/${editId}` : "/api/admin/blog", {
+    const res = await fetch(editId ? `/api/admin/blog/${editId}` : "/api/admin/blog", {
       method: editId ? "PUT" : "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ...form, order: form.order !== "" ? Number(form.order) : 0 }),
     });
-    setSaving(false); setShowModal(false); load();
+    setSaving(false);
+    if (res.ok) {
+      setToast({ message: editId ? "Blog post updated successfully" : "Blog post created successfully", type: "success" });
+      setShowModal(false); load();
+    } else {
+      const data = await res.json().catch(() => ({}));
+      setToast({ message: data.error ?? "Failed to save blog post", type: "error" });
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this post?")) return;
-    await fetch(`/api/admin/blog/${id}`, { method: "DELETE" });
+    const res = await fetch(`/api/admin/blog/${id}`, { method: "DELETE" });
+    if (res.ok) setToast({ message: "Blog post deleted", type: "success" });
+    else setToast({ message: "Failed to delete blog post", type: "error" });
     load();
   };
 
   return (
+    <>
+    {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     <div className="p-4 sm:p-6">
       <div className="bg-white rounded-2xl p-4 sm:p-6">
         <h1 className="text-xl font-bold text-gray-900 mb-5">Blog</h1>
@@ -161,5 +174,6 @@ export default function BlogPage() {
         </div>
       )}
     </div>
+    </>
   );
 }

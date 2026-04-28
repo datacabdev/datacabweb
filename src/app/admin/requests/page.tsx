@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState, useCallback } from "react";
 import { Trash2, ChevronDown } from "lucide-react";
+import Toast from "@/components/admin/Toast";
 
 interface DataRequest {
   _id: string;
@@ -22,6 +23,7 @@ export default function RequestsPage() {
   const [requests, setRequests] = useState<DataRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<string | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: "success" | "error" } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -33,23 +35,35 @@ export default function RequestsPage() {
   useEffect(() => { load(); }, [load]);
 
   const updateStatus = async (id: string, status: string) => {
-    await fetch(`/api/admin/requests/${id}`, {
+    const res = await fetch(`/api/admin/requests/${id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ status }),
     });
-    setRequests((prev) => prev.map((r) => r._id === id ? { ...r, status: status as DataRequest["status"] } : r));
+    if (res.ok) {
+      setRequests((prev) => prev.map((r) => r._id === id ? { ...r, status: status as DataRequest["status"] } : r));
+      setToast({ message: "Status updated", type: "success" });
+    } else {
+      setToast({ message: "Failed to update status", type: "error" });
+    }
   };
 
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this request?")) return;
-    await fetch(`/api/admin/requests/${id}`, { method: "DELETE" });
-    setRequests((prev) => prev.filter((r) => r._id !== id));
+    const res = await fetch(`/api/admin/requests/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      setRequests((prev) => prev.filter((r) => r._id !== id));
+      setToast({ message: "Request deleted", type: "success" });
+    } else {
+      setToast({ message: "Failed to delete request", type: "error" });
+    }
   };
 
   const pending = requests.filter((r) => r.status === "pending").length;
 
   return (
+    <>
+    {toast && <Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} />}
     <div className="p-4 sm:p-6">
       <div className="bg-white rounded-2xl p-4 sm:p-6">
         <div className="flex items-center gap-3 mb-6">
@@ -136,5 +150,6 @@ export default function RequestsPage() {
         )}
       </div>
     </div>
+    </>
   );
 }
