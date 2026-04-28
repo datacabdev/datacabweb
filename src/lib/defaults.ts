@@ -55,7 +55,7 @@ export const defaultSettings = {
       "Our mission is to work with groups and social movements working together for social, economic, cultural and environmental justice by helping them use media and communication technologies to inform, organise, mobilise and further their struggles to create a better world.",
       "We use participatory strategies to create awareness, sensitise people and increase community voice. In collaboration with our target groups, we create platforms for sustained participatory interaction among relevant stakeholders.",
     ],
-    visitSiteUrl: "https://maji.org.ng",
+    visitSiteUrl: "https://www.majinigeria.org/",
     images: [],
   },
   appBanner: {
